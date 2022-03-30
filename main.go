@@ -6,11 +6,18 @@ import (
   "net/http"
   "io/ioutil"
   "encoding/json"
-  "github.com/satori/go.uuid"
+  "github.com/satori/go.uuid" // to generate a random uuid
 )
 
 type Account struct {
-    Data    *AccountData `json:"data,omitempty"`
+    Data            *AccountData    `json:"data,omitempty"`
+    Links           *Link           `json:"links,omitempty"`
+}
+
+type Link struct {
+    First           string      `json:"first,omitempty"`
+    Last            string      `json:"last,omitempty"`
+    Self            string      `json:"self,omitempty"`
 }
 
 type AccountData struct {
@@ -40,39 +47,95 @@ type AccountAttributes struct {
 }
 
 func main() {
-  fetchAccounts()
-  createAccount()
-}
+    for i := 0; i < 3; i++ {
+        createAccount() //create an account
+    }
 
-func fetchAccounts(){
-    url := "http://localhost:8080/v1/organisation/accounts"
-  method := "GET"
+  acctId, err := createAccount() // create one more account
+  fetchAccounts() // fetch the accounts
 
-  client := &http.Client {
-  }
-  req, err := http.NewRequest(method, url, nil)
-
+  // if account successfully created, fetch then delete it and show the results
   if err != nil {
-    fmt.Println(err)
-    return
+      return
   }
+  res :=  fetchAccount(acctId)
+  fmt.Println(res)
+  deleteAccount(acctId) 
   
-  res, err := client.Do(req)
-  if err != nil {
-    fmt.Println(err)
-    return
-  }
-  defer res.Body.Close()
+  // fetch again to show the difference
 
-  body, err := ioutil.ReadAll(res.Body)
-  if err != nil {
-    fmt.Println(err)
-    return
-  }
-  fmt.Println(string(body))
 }
 
-func createAccount() {
+// deletes the account with the specified ID
+func deleteAccount(id string) {
+    url := "http://localhost:8080/v1/organisation/accounts/" + id + "?version=0"
+    method := "DELETE"
+
+      payload := strings.NewReader(``)
+
+      client := &http.Client {
+      }
+      req, err := http.NewRequest(method, url, payload)
+
+      if err != nil {
+        fmt.Println(err)
+        return
+      }
+
+      res, err := client.Do(req)
+      if err != nil {
+        fmt.Println(err)
+        return
+      }
+      defer res.Body.Close()
+
+      body, err := ioutil.ReadAll(res.Body)
+      if err != nil {
+        fmt.Println(err)
+        return
+      }
+      fmt.Println(string(body))
+      fmt.Println("Deletion of account with ID of " + id + " successful")
+}
+
+//fetches the list of accounts and prints them to the console
+func fetchAccount(id string) string{
+      fmt.Println("Fetching Account with ID: " + id)
+      url := "http://localhost:8080/v1/organisation/accounts/" + id + "?version=0"
+      method := "GET"
+
+      client := &http.Client {
+      }
+      req, err := http.NewRequest(method, url, nil)
+
+      if err != nil {
+        fmt.Println(err)
+        return ""
+      }
+  
+      res, err := client.Do(req)
+      if err != nil {
+        fmt.Println(err)
+        return ""
+      }
+      defer res.Body.Close()
+
+      body, err := ioutil.ReadAll(res.Body)
+      if err != nil {
+        fmt.Println(err)
+        return ""
+      }
+
+      return string(body)
+}
+
+func fetchAccounts() string {
+    fmt.Println("Fetching all accounts")
+    return fetchAccount("")
+}
+
+// creates an account with a randomly-generated uuid, then returns the uuid
+func createAccount() (response string, err error) {
 
   url := "http://localhost:8080/v1/organisation/accounts"
   method := "POST"
@@ -91,6 +154,7 @@ func createAccount() {
   attributes.Bic = "NWBKGB42"
   attributes.AccountClassification = &classification
 
+  // credit to Keithwachira
   myUuid := uuid.NewV4()
   acctId := myUuid.String()
  
@@ -107,9 +171,9 @@ func createAccount() {
   b, err := json.Marshal(account)
     if err != nil {
         fmt.Println(err)
-        return
+        return "", err
     }
-    fmt.Println("b: " + string(b))
+   // fmt.Println("b: " + string(b))
 
    
   payload := strings.NewReader(string(b))
@@ -120,20 +184,24 @@ func createAccount() {
 
   if err != nil {
     fmt.Println(err)
-    return
+    return "", err
   }
 
   res, err := client.Do(req)
   if err != nil {
     fmt.Println(err)
-    return
+    return "", err
   }
   defer res.Body.Close()
 
+  /* for debugging only, not part of solution
   body, err := ioutil.ReadAll(res.Body)
   if err != nil {
     fmt.Println(err)
-    return
+    return "", err
   }
-  fmt.Println("143: " + string(body))
+  fmt.Println("143: " + string(body)) */
+  fmt.Println("Creation of account with ID of " + acctId + " successful")
+
+  return acctId, nil
 }
