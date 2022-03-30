@@ -5,14 +5,20 @@ import (
   "strings"
   "net/http"
   "io/ioutil"
+  "encoding/json"
+  "github.com/satori/go.uuid"
 )
 
+type Account struct {
+    Data    *AccountData `json:"data,omitempty"`
+}
+
 type AccountData struct {
-	Attributes     *AccountAttributes `json:"attributes,omitempty"`
 	ID             string             `json:"id,omitempty"`
 	OrganisationID string             `json:"organisation_id,omitempty"`
 	Type           string             `json:"type,omitempty"`
 	Version        *int64             `json:"version,omitempty"`
+    Attributes     *AccountAttributes `json:"attributes,omitempty"`
 }
 
 type AccountAttributes struct {
@@ -39,7 +45,7 @@ func main() {
 }
 
 func fetchAccounts(){
-	url := "http://localhost:8080/v1/organisation/accounts"
+    url := "http://localhost:8080/v1/organisation/accounts"
   method := "GET"
 
   client := &http.Client {
@@ -70,39 +76,43 @@ func createAccount() {
 
   url := "http://localhost:8080/v1/organisation/accounts"
   method := "POST"
-  var account AccountData
   var attributes AccountAttributes
 
-  attributes.Country = "GB"
+  country := "GB"
+  classification := "Personal"
+
+  attributes.Country = &country
   attributes.BaseCurrency = "GBP"
+  attributes.BankID = "400302"
+  attributes.BankIDCode = "GBDSC"
+  attributes.AccountNumber = "10000004"
+  attributes.Iban = "GB28NWBK40030212764204"
+  attributes.Name = []string{"Nick","Bury"}
+  attributes.Bic = "NWBKGB42"
+  attributes.AccountClassification = &classification
 
-  account.ID = "2f4dd848-afc9-11ec-b909-0242ac120002"
-  account.OrganisationID = "3161a9d0-afc3-11ec-b909-0242ac120002"
-  account.Type = "accounts"
+  myUuid := uuid.NewV4()
+  acctId := myUuid.String()
+ 
+ 
+  var accountData = &AccountData{
+      ID: string(acctId), 
+      OrganisationID: "3161a9d0-afc3-11ec-b909-0242ac120002", 
+      Type: "accounts",
+      Attributes: &attributes }
+  // array of strings.
 
+  var account = &Account{Data: accountData}
 
-  json := `{
-  "data": {
-    "id": "3161a6a6-afc3-11ec-b909-0242ac120002",
-    "organisation_id": "3161a9d0-afc3-11ec-b909-0242ac120002",
-    "type": "accounts",
-    "attributes": {
-       "country": "GB",
-        "base_currency": "GBP",
-        "bank_id": "400302",
-        "bank_id_code": "GBDSC",
-        "account_number": "10000004",
-        "customer_id": "234",
-        "iban": "GB28NWBK40030212764204",
-        "bic": "NWBKGB42",
-        "name": "{Nick, Bury}",
-        "account_classification": "Personal"
+  b, err := json.Marshal(account)
+    if err != nil {
+        fmt.Println(err)
+        return
     }
-  }
-}`
+    fmt.Println("b: " + string(b))
 
-  
-  payload := strings.NewReader(json)
+   
+  payload := strings.NewReader(string(b))
 
   client := &http.Client {
   }
@@ -125,5 +135,5 @@ func createAccount() {
     fmt.Println(err)
     return
   }
-  fmt.Println(string(body))
+  fmt.Println("143: " + string(body))
 }
