@@ -63,7 +63,7 @@ func main() {
   deleteAccount(acctId) 
   
   // fetch again to show the difference
-
+  fmt.Println(fetchAccounts())
 }
 
 // deletes the account with the specified ID
